@@ -1,6 +1,6 @@
 // Offline cache for the app shell. Bump VERSION whenever any cached file changes
 // so phones pick up the update on their next launch.
-const VERSION = "tube-scan-v2";
+const VERSION = "tube-scan-v3";
 const FILES = [
   "./",
   "index.html",

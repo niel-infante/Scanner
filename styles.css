@@ -165,6 +165,9 @@ button[aria-pressed="true"] { background: #ffd60a; color: #000; }
   -webkit-user-select: text;
   user-select: text;
 }
+#result-text { transition: opacity 0.15s; }
+#result.stale #result-text { opacity: 0.35; }
+#result.stale .label { color: #ffd60a; }
 #result-note { margin: 0 0 16px; text-align: center; color: var(--muted); min-height: 1.4em; }
 #result .row button { flex: 1; }
 

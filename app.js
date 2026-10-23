@@ -26,6 +26,7 @@ const torchBtn = $("torch");
 const snapInput = $("snap");
 const resultSheet = $("result");
 const resultText = $("result-text");
+const resultLabel = $("result-label");
 const resultNote = $("result-note");
 const historySheet = $("history");
 const historyList = $("history-list");
@@ -47,6 +48,11 @@ let history = loadHistory();
 const SUPPRESS_CLEAR_MS = 1500;
 let suppressText = null;
 let suppressSeenAt = 0;
+// The live result on screen, and when its tube was last seen in the box.
+// After STALE_MS without it, the result is dimmed as "not in view".
+const STALE_MS = 700;
+let liveText = null;
+let liveSeenAt = 0;
 
 const setStatus = (msg) => (statusEl.textContent = msg);
 
@@ -242,13 +248,23 @@ async function scanTick() {
     busy = true;
     try {
       const hit = await decodeTube(grabReticleRegion());
-      if (suppressText && hit?.text === suppressText) {
-        suppressSeenAt = performance.now();
+      const now = performance.now();
+      if (!scanning) {
+        // paused (photo, history) while this frame was decoding; drop it
+      } else if (suppressText && hit?.text === suppressText) {
+        suppressSeenAt = now;
         setStatus("Same tube as last read. Move to the next tube.");
-      } else if (hit && scanning) {
+      } else if (hit) {
         suppressText = null;
-        showResult(hit.text, "");
-      } else if (suppressText && performance.now() - suppressSeenAt > SUPPRESS_CLEAR_MS) {
+        if (hit.text === liveText) {
+          liveSeenAt = now;
+          setInView(true);
+        } else {
+          showResult(hit.text, "", { live: true });
+        }
+      } else if (liveText && now - liveSeenAt > STALE_MS) {
+        setInView(false);
+      } else if (suppressText && now - suppressSeenAt > SUPPRESS_CLEAR_MS) {
         suppressText = null;
         setStatus("Aim the box at one tube");
       }
@@ -311,15 +327,31 @@ snapInput.addEventListener("change", async () => {
 
 // ---------- result ----------
 
-function showResult(text, note) {
-  pauseScanning();
-  viewer.classList.add("found");
+// Live results keep scanning so the sheet always reflects the tube in the box:
+// a different tube replaces the value, and losing the tube marks it stale.
+// Photo results pause scanning, since they aren't about the live view.
+function showResult(text, note, { live = false } = {}) {
+  if (live) {
+    liveText = text;
+    liveSeenAt = performance.now();
+  } else {
+    pauseScanning();
+    liveText = null;
+  }
   resultText.textContent = text;
   resultNote.textContent = note;
   resultSheet.hidden = false;
-  setStatus("Read OK");
+  setInView(true);
   feedback();
   addToHistory(text);
+}
+
+function setInView(inView) {
+  if (resultSheet.classList.contains("stale") === !inView && viewer.classList.contains("found") === inView) return;
+  viewer.classList.toggle("found", inView);
+  resultSheet.classList.toggle("stale", !inView);
+  resultLabel.textContent = inView ? "Tube barcode" : "Last read · not in view";
+  setStatus(inView ? "Read OK" : "Aim the box at one tube");
 }
 
 function feedback() {
@@ -356,6 +388,7 @@ $("next").addEventListener("click", () => {
   resultSheet.hidden = true;
   suppressText = resultText.textContent;
   suppressSeenAt = performance.now();
+  liveText = null;
   if (track) resumeScanning();
   else setStatus("Tap Start camera, or use Snap photo");
 });

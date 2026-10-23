@@ -22,6 +22,10 @@ reads 90 of the 96 tubes from one phone photo.
 
 - **Live mode:** tap **Start camera** and hold the tube in the box. It beeps and shows the
   value. Tap **Copy**, then **Scan next**. It won't re-read the same tube until you move on.
+  - **Moving the phone:** the value keeps tracking what's in the box. A different tube
+    replaces it, with a new beep.
+  - **Tube out of view:** after about 0.7 s the value dims and is labelled
+    **Last read · not in view**.
 - **If the picture is blurry:**
   - **Hold the phone back.** Phone cameras can't focus very close, so hold it about
     15–20 cm away and use **Zoom** (2–3×) to fill the box.
