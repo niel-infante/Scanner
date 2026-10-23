@@ -1,0 +1,168 @@
+:root {
+  --bg: #000;
+  --panel: #1c1c1e;
+  --text: #f2f2f7;
+  --muted: #a1a1a6;
+  --accent: #30d158;
+  --button: #3a3a3c;
+  --reticle: rgba(255, 255, 255, 0.9);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button, .button {
+  font: inherit;
+  color: var(--text);
+  background: var(--button);
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 18px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+button.primary { background: var(--accent); color: #000; font-weight: 600; }
+button.big { font-size: 20px; padding: 16px 28px; }
+button[aria-pressed="true"] { background: #ffd60a; color: #000; }
+
+.row { display: flex; gap: 10px; justify-content: center; align-items: center; }
+
+#viewer { position: fixed; inset: 0; }
+
+#video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #111;
+}
+
+/* Square aiming box in the middle of the screen; app.js crops the same region. */
+#reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 55vmin;
+  height: 55vmin;
+  transform: translate(-50%, -50%);
+  border: 3px solid var(--reticle);
+  border-radius: 16px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+#reticle span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--reticle);
+}
+#viewer.found #reticle { border-color: var(--accent); }
+
+#status {
+  position: absolute;
+  top: calc(var(--safe-t) + 12px);
+  left: 16px;
+  right: 16px;
+  margin: 0;
+  text-align: center;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+}
+
+#start {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#controls {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(var(--safe-b) + 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#zoom-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+}
+#zoom-wrap[hidden] { display: none; }
+#zoom { flex: 1; accent-color: var(--accent); }
+#zoom-val { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Result and history sheets slide over the camera view. */
+#result, #history {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px calc(var(--safe-b) + 20px);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+}
+#result[hidden], #history[hidden], [hidden] { display: none !important; }
+
+#result .label { margin: 0; color: var(--muted); text-align: center; }
+#result-text {
+  margin: 6px 0 4px;
+  text-align: center;
+  font: 600 clamp(28px, 9vw, 44px)/1.2 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.03em;
+  word-break: break-all;
+  -webkit-user-select: text;
+  user-select: text;
+}
+#result-note { margin: 0 0 16px; text-align: center; color: var(--muted); min-height: 1.4em; }
+#result .row button { flex: 1; }
+
+#history { top: calc(var(--safe-t) + 40px); display: flex; flex-direction: column; }
+#history header { justify-content: space-between; }
+#history h2 { margin: 0; font-size: 20px; }
+#history .hint { color: var(--muted); margin: 6px 0 10px; }
+#history-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+#history-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid #2c2c2e;
+}
+#history-list code { font: 17px ui-monospace, "SF Mono", Menlo, monospace; }
+#history-list time { color: var(--muted); font-size: 14px; }
