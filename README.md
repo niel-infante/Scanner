@@ -6,6 +6,10 @@ Aim the on-screen box at one tube and the value appears, with a button to copy i
 It runs in Safari (or any modern phone browser) and can be added to the home screen
 like an app. It needs no App Store, no Apple developer account, and nothing that expires.
 
+
+![icons/qr.png](icons/qr.png)
+
+
 ## Why the regular reader fails
 
 The tube codes are laser-etched **white on black** (inverted), small, and randomly rotated.
@@ -18,9 +22,18 @@ reads 90 of the 96 tubes from one phone photo.
 
 - **Live mode:** tap **Start camera** and hold the tube in the box. It beeps and shows the
   value. Tap **Copy**, then **Scan next**. It won't re-read the same tube until you move on.
-- **Zoom / Light:** shown when the phone's browser supports them. If the image is blurry,
-  hold the phone back about 15–20 cm and zoom in 2–3×. Phone cameras, especially iPhone Pro
-  models, can't focus very close.
+- **If the picture is blurry:**
+  - **Hold the phone back.** Phone cameras can't focus very close, so hold it about
+    15–20 cm away and use **Zoom** (2–3×) to fill the box.
+  - **Try another camera.** Phones with several back cameras show a camera picker. Some of
+    those cameras can't focus close at all. On Android, `camera2 0` is usually the main
+    camera. The choice is remembered on that phone.
+  - **Tap to focus.** Tap the tube on screen.
+  - **Use the Focus slider** (Android). Drag it until the dots are sharp. **Auto** returns
+    to autofocus.
+  - **Check the info line.** The small grey line under the status shows the camera, the
+    resolution and the focus mode in use.
+- **Light:** turns on the flashlight, where the phone supports it.
 - **Snap photo:** opens the phone's own camera, which focuses better up close. Take a
   picture with the tube in the middle. The app reads the code nearest the centre.
   Use this if live mode struggles.

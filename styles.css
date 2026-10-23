@@ -108,7 +108,7 @@ button[aria-pressed="true"] { background: #ffd60a; color: #000; }
   gap: 12px;
 }
 
-#zoom-wrap {
+.slider {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -116,9 +116,31 @@ button[aria-pressed="true"] { background: #ffd60a; color: #000; }
   background: rgba(0, 0, 0, 0.6);
   border-radius: 12px;
 }
-#zoom-wrap[hidden] { display: none; }
-#zoom { flex: 1; accent-color: var(--accent); }
+.slider input { flex: 1; accent-color: var(--accent); }
+.slider button { min-height: 36px; padding: 6px 12px; }
 #zoom-val { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; }
+
+#camera {
+  font: inherit;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #48484a;
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+
+#info {
+  position: absolute;
+  top: calc(var(--safe-t) + 64px);
+  left: 16px;
+  right: 16px;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  text-shadow: 0 1px 2px #000;
+}
 
 /* Result and history sheets slide over the camera view. */
 #result, #history {

@@ -5,6 +5,7 @@ const SCAN_INTERVAL_MS = 120;
 // still reads; decodeTube picks the code nearest the centre.
 const CROP_MARGIN = 1.25;
 const HISTORY_KEY = "tube-scan-history";
+const CAMERA_KEY = "tube-scan-camera";
 const HISTORY_MAX = 200;
 
 const $ = (id) => document.getElementById(id);
@@ -16,6 +17,11 @@ const startBtn = $("start");
 const zoomWrap = $("zoom-wrap");
 const zoomInput = $("zoom");
 const zoomVal = $("zoom-val");
+const focusWrap = $("focus-wrap");
+const focusInput = $("focus");
+const focusAutoBtn = $("focus-auto");
+const cameraSelect = $("camera");
+const infoEl = $("info");
 const torchBtn = $("torch");
 const snapInput = $("snap");
 const resultSheet = $("result");
@@ -33,6 +39,7 @@ let scanning = false;
 let busy = false;
 let timer = null;
 let audio = null;
+let focusCaps = {};
 let history = loadHistory();
 // After "Scan next", the camera is usually still on the tube just read.
 // Ignore that value until it has been out of view for SUPPRESS_CLEAR_MS
@@ -45,20 +52,38 @@ const setStatus = (msg) => (statusEl.textContent = msg);
 
 // ---------- camera ----------
 
-async function startCamera() {
+function savedCameraId() {
+  try {
+    return localStorage.getItem(CAMERA_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function openStream(deviceId) {
+  return navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: {
+      ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: "environment" } }),
+      // Ask high; the browser picks the nearest mode the camera supports.
+      // More pixels per tube lets you hold the phone back (in focus) and still decode.
+      width: { ideal: 3840 },
+      height: { ideal: 2160 },
+    },
+  });
+}
+
+async function startCamera(deviceId = savedCameraId()) {
   stopCamera();
   if (!navigator.mediaDevices?.getUserMedia) {
     setStatus("Camera not available. The page must be opened over HTTPS.");
     return;
   }
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-      },
+    stream = await openStream(deviceId).catch((err) => {
+      // A remembered camera may no longer exist; fall back to the default back camera.
+      if (deviceId && (err.name === "OverconstrainedError" || err.name === "NotFoundError")) return openStream(null);
+      throw err;
     });
   } catch (err) {
     setStatus(`Camera blocked: ${err.message}. Allow camera access and reload, or use Snap photo.`);
@@ -70,7 +95,44 @@ async function startCamera() {
   await video.play().catch(() => {});
   startBtn.hidden = true;
   setupTrackControls();
+  listCameras();
   resumeScanning();
+}
+
+// Phones often have several back cameras (wide, ultra-wide, tele, depth). Some
+// can't focus close, so let the user choose; labels are only available after
+// camera permission has been granted.
+async function listCameras() {
+  const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+  const current = track?.getSettings?.().deviceId;
+  cameraSelect.replaceChildren(
+    ...cams.map((cam, i) => {
+      const opt = document.createElement("option");
+      opt.value = cam.deviceId;
+      opt.textContent = cam.label || `Camera ${i + 1}`;
+      opt.selected = cam.deviceId === current;
+      return opt;
+    }),
+  );
+  cameraSelect.hidden = cams.length < 2;
+}
+
+cameraSelect.addEventListener("change", () => {
+  try {
+    localStorage.setItem(CAMERA_KEY, cameraSelect.value);
+  } catch {
+    // not remembered; still switch for this session
+  }
+  startCamera(cameraSelect.value);
+});
+
+function showInfo() {
+  if (!track) return (infoEl.textContent = "");
+  const s = track.getSettings?.() ?? {};
+  const parts = [track.label || "camera", `${video.videoWidth}×${video.videoHeight}`];
+  if (s.focusMode) parts.push(`focus: ${s.focusMode}`);
+  if (s.focusDistance != null) parts.push(`${Number(s.focusDistance).toFixed(2)} m`);
+  infoEl.textContent = parts.join(" · ");
 }
 
 function stopCamera() {
@@ -97,11 +159,52 @@ function setupTrackControls() {
   torchBtn.hidden = !caps.torch;
   torchBtn.setAttribute("aria-pressed", "false");
 
-  // Continuous autofocus where the browser exposes it (mostly Android).
-  if (caps.focusMode?.includes("continuous")) {
-    track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+  // Focus controls are exposed by Chrome on Android; Safari doesn't expose them.
+  focusCaps = caps;
+  if (caps.focusDistance && caps.focusMode?.includes("manual")) {
+    focusInput.min = caps.focusDistance.min;
+    focusInput.max = caps.focusDistance.max;
+    focusInput.step = caps.focusDistance.step || 0.01;
+    focusInput.value = settings.focusDistance ?? caps.focusDistance.min;
+    focusWrap.hidden = false;
+  } else {
+    focusWrap.hidden = true;
+  }
+  setAutoFocus();
+  video.addEventListener("loadedmetadata", showInfo, { once: true });
+  showInfo();
+}
+
+function setAutoFocus() {
+  focusAutoBtn.setAttribute("aria-pressed", "true");
+  if (focusCaps.focusMode?.includes("continuous")) {
+    track?.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).then(showInfo, () => {});
   }
 }
+
+focusAutoBtn.addEventListener("click", setAutoFocus);
+
+// Manual focus: drag until the dots on the tube are sharp.
+focusInput.addEventListener("input", () => {
+  focusAutoBtn.setAttribute("aria-pressed", "false");
+  track
+    ?.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: Number(focusInput.value) }] })
+    .then(showInfo, () => {});
+});
+
+// Tap the picture to focus there.
+video.addEventListener("click", (e) => {
+  if (!track || !focusCaps.focusMode) return;
+  const view = video.getBoundingClientRect();
+  const scale = Math.max(view.width / video.videoWidth, view.height / video.videoHeight);
+  const x = (video.videoWidth / 2 + (e.clientX - (view.left + view.width / 2)) / scale) / video.videoWidth;
+  const y = (video.videoHeight / 2 + (e.clientY - (view.top + view.height / 2)) / scale) / video.videoHeight;
+  const mode = focusCaps.focusMode.includes("single-shot") ? "single-shot" : "continuous";
+  focusAutoBtn.setAttribute("aria-pressed", "true");
+  track
+    .applyConstraints({ advanced: [{ focusMode: mode, pointsOfInterest: [{ x, y }] }] })
+    .then(showInfo, () => {});
+});
 
 zoomInput.addEventListener("input", () => {
   const zoom = Number(zoomInput.value);
